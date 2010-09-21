@@ -1,0 +1,93 @@
+import os, string, time
+import repo_config as repoconfig
+
+PARENT_PATH = os.getcwd()
+
+def _download_taxdump_(target, source, env): 
+	os.popen("wget -N " + repoconfig.shared_taxonomy_website)
+
+def _untar_(target, source, env): 
+	os.popen("tar -xzf " + source[0].rstr())
+
+def _download_experiments_(target, source, env): 
+	print "wget -N " + repoconfig.arrayexpress.data_website[0]
+	os.popen("wget -N " + repoconfig.arrayexpress.data_website[0])
+
+# command + 2 inputs + 1 output :  source = [command, input1, input2] target = [target1]
+def _run_shellcmd_C21_ (target, source, env):	
+	os.popen("./" + source[0].rstr() + " " + source[1].rstr() + " < " + source[2].rstr() + " > " + target[0].rstr()) 
+
+def _process_data_(target, source, env): 
+	os.popen("./" + source[0].rstr() + " < " + source[1].rstr())
+
+def _create_kospcl_(target, source, env): 
+	os.popen("Combiner E-*/*/*_w.txt | grep -v EWEIGHT | ruby ~/scripts/transpose.rb | KNNImputer -k 0 -m 0.333 -s 0 | \
+		grep -v EWEIGHT | ruby ~/scripts/transpose.rb | KNNImputer -k 0 -m 0.333 -s 1 | "+\
+		"ruby -pe \'$$_ =~ /^([^\t]+)(.*)/; if( $$. == 1 ); $$_ = $$1 + \"	NAME	GWEIGHT\"; elsif( $$1 == \"EWEIGHT\" ); "+\
+			"$$_ = $$1 + \"		\"; else; $$_ = $$1 + \"\t\" + $$1 + \"	1\"; end; $$_ += $$2 + \"\n\"\' > " + target[0].rstr())
+
+def _run_subdirectories_(target, source, env): 
+	SUBDIRS = map(lambda y: string.split(y,'/')[1], map(lambda x: string.strip(x),os.popen("find . -maxdepth 1 -type d -name \"E-*\"").readlines()))
+	SUBDIRS = SUBDIRS[:10]  # TEMP!  TODO: REMOVE IT 
+	for subdir in SUBDIRS: 
+		ID			= subdir 
+		ID_TYPE		= string.split(ID,"-")[1]
+		FILE_ZIP		= ID + '.processed.1.zip'
+		FILE_SDRF		= ID + '.sdrf.txt'
+		PROG_ZIP2DIRS		= "zip2dirs.rb"
+		
+
+		def _download_FILE_ZIP_(target, source, env, path2dwnld = ID_TYPE+"/"+ID+"/"+FILE_ZIP,currsubdir = ID,parpath = PARENT_PATH ): 
+			os.chdir(parpath +"/"+currsubdir)
+			os.popen("wget -N " + repoconfig.arrayexpress.data_website[1]+path2dwnld)	
+			os.chdir(parpath)
+			
+		def _download_FILE_SDRF_(target, source, env, path2dwnld = ID_TYPE+"/"+ID+"/"+FILE_SDRF,currsubdir = ID,parpath = PARENT_PATH): 
+			os.chdir(parpath +"/"+currsubdir)
+			os.popen("wget -N " + repoconfig.arrayexpress.data_website[1]+path2dwnld )
+			os.chdir(parpath)
+
+		def _zip2dirs_(target, source, env, currsubdir = ID, parpath = PARENT_PATH):
+			os.chdir(parpath +"/"+currsubdir)
+			prog_zip2dir_path = parpath + "/" + "zip2dirs.rb"
+			
+			os.popen("ruby ../zip2dirs.rb"+" "+string.split(source[1].rstr(),"/")[1]+" "+ string.split(source[2].rstr(),"/")[1])  # TODO: CHECK IT AGAIN WITH FULL ./PATH
+
+			listd = os.listdir(parpath +"/"+currsubdir)
+			flistd = filter(lambda x: x[:len(currsubdir) + 1] == currsubdir + '_', listd)
+			SUBSUBDIRS = filter(lambda x: os.path.isdir(parpath +"/"+currsubdir+ '/' + x), flistd)
+			print SUBSUBDIRS 
+			print "____________________" 
+			#SConscript(map(lambda x: x + '/SConscript', SUBSUBDIRS))
+			os.chdir(parpath)
+
+	
+
+		#env.Command(['dwnld_FileZip_'+subdir],[], _download_FILE_ZIP_)  # TEMPORARY COMMENTED 
+		#env.Command(['dwnld_FileSdrf_'+subdir],[], _download_FILE_SDRF_) # TEMPORARY COMMENTED
+
+		
+		#env.Command(['perform_zip2dir_'+subdir],[PROG_ZIP2DIRS, subdir+"/"+FILE_ZIP, subdir+"/"+FILE_SDRF ,'dwnld_FileZip_'+subdir,'dwnld_FileSdrf_'+subdir], _zip2dirs_)# TEMPORARY COMMENTED - replace with the next line
+
+		env.Command(['perform_zip2dir_'+subdir],[PROG_ZIP2DIRS, subdir+"/"+FILE_ZIP, subdir+"/"+FILE_SDRF], _zip2dirs_)
+
+
+	
+env = Environment() 
+
+
+#env.Command(['dwnld_taxdump'], [], _download_taxdump_) # TEMPORARY COMMENTED
+#env.Command(['names.dmp', 'nodes.dmp'], ['taxdump.tar.gz', 'dwnld_taxdump'], _untar_)
+env.Command(['names.dmp', 'nodes.dmp'], ['taxdump.tar.gz'], _untar_)
+env.Command(['species.txt'], ['nodes2species.rb', 'names.dmp', 'nodes.dmp'], _run_shellcmd_C21_)
+
+#env.Command(['dwnld_arrayexpress'], [], _download_experiments_)# TEMPORARY COMMENTED
+
+#env.Command(['ids.txt'], ['experiments2ids.rb', 'species.txt', 'experiments','dwnld_arrayexpress'], _run_shellcmd_C21_)
+env.Command(['ids.txt'], ['experiments2ids.rb', 'species.txt', 'experiments'], _run_shellcmd_C21_)
+
+
+env.Command(['processdata'], ['subdirectories.rb', 'ids.txt'], _process_data_)
+env.Command(['run_subdirs'],['processdata'],_run_subdirectories_)
+
+env.Command(['kos.pcl'],['run_subdirs'],_create_kospcl_) 
