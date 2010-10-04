@@ -27,6 +27,17 @@ def _create_kospcl_(target, source, env):
 		"ruby -pe \'$$_ =~ /^([^\t]+)(.*)/; if( $$. == 1 ); $$_ = $$1 + \"	NAME	GWEIGHT\"; elsif( $$1 == \"EWEIGHT\" ); "+\
 			"$$_ = $$1 + \"		\"; else; $$_ = $$1 + \"\t\" + $$1 + \"	1\"; end; $$_ += $$2 + \"\n\"\' > " + target[0].rstr())
 
+#KNNImputer -i <data.pcl> -o <imputed.pcl>
+
+#kos.pcl:
+#	Combiner E-*/*/*_w.txt | grep -v EWEIGHT | \
+#		ruby ~/scripts/transpose.rb | KNNImputer -k 0 -m 0.333 -s 0 | \
+#		grep -v EWEIGHT | ruby ~/scripts/transpose.rb | \
+#		KNNImputer -k 0 -m 0.333 -s 1 | \
+#		ruby -pe '$$_ =~ /^([^\t]+)(.*)/; if( $$. == 1 ); $$_ = $$1 + "	NAME	GWEIGHT"; elsif( $$1 == "EWEIGHT" ); $$_ = $$1 + "		"; else; $$_ = $$1 + "\t" + $$1 + "	1"; end; $$_ += $$2 + "\n"' > $@
+
+
+
 
 env = Environment() 
 

@@ -1,139 +1,106 @@
-Import('env','SUBSUBDIRS', 'currsubdir', 'IDS_ARRAY','parpath','sdrf_file')
+Import('env','SUBSUBDIRS', 'currsubdir', 'IDS_ARRAY','sdrf_file')
 import os, string
-
-
-
 
 for subsubdir in SUBSUBDIRS:
 	SUB_ID 		= subsubdir
 	ID_BASE		= currsubdir
-	PROG_TXT2PCL		= parpath + "/txt2pcl.rb"
-	PROG_METADATA		= parpath + "/metadata.rb"
-	PROG_PCL2KO		= parpath + "/pcl2ko.rb"
-	PROG_H2W		= parpath + "/h2w.rb"
-	FILE_PCL		= SUB_ID + ".pcl"
-	FILE_PCLPRE		= SUB_ID + "_pre.pcl"
-	FILE_PCLKO		= SUB_ID + "_ko.pcl"
-	FILE_PCLKOPRE		= SUB_ID + "_ko_pre.pcl"
-	#FILE_PCLKOPRE		= parpath + "/" + currsubdir + "/" + SUB_ID + "/" + FILE_PCLKOPRE
-	FILE_METADATA		= SUB_ID + ".txt"
-	FILE_METADATAPRE	= SUB_ID + ".tmp"
-	FILE_DAB		= SUB_ID + ".dab"
-	FILE_DABKO		= SUB_ID + "_ko.dab"
-	FILE_HKO		= SUB_ID + "_ko_h.txt"
-	FILE_WKO		= SUB_ID + "_ko_w.txt"
-	FILE_QUANT		= SUB_ID + ".quant"
-	FILE_TXT		= filter(lambda x: x[:len(ID_BASE)+1] == ID_BASE + "-" and x[-4:] == ".txt", \
-					  os.listdir(parpath +"/"+currsubdir + "/" + subsubdir))
-	FILE_TXT		= map(lambda x: parpath + '/' + currsubdir + '/' + SUB_ID + '/' + x,FILE_TXT) 
-	FILE_SDRF		= parpath + '/' + ID_BASE + '/' + sdrf_file   #source[2].rstr() 
-	FILE_KOC		= parpath + "/species/koc"                
-	FILE_TMP		= "tmp"
-	FILES_KO		= parpath  + "/kos/"    
+	PROG_TXT2PCL		= 'txt2pcl.rb'
+	PROG_METADATA		= 'metadata.rb'
+	PROG_PCL2KO		= 'pcl2ko.rb'
+	PROG_H2W		= 'h2w.rb'
+	FILE_PCL		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.pcl'
+	FILE_PCLPRE		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_pre.pcl'
+	FILE_PCLKO		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko.pcl'
+	FILE_PCLKOPRE		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko_pre.pcl'
+	FILE_METADATA		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.txt'
+	FILE_METADATAPRE	= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.tmp'
+	FILE_DAB		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.dab'
+	FILE_DABKO		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko.dab'
+	FILE_HKO		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko_h.txt'
+	FILE_WKO		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko_w.txt'
+	FILE_QUANT		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.quant'
+	FILE_TXT		= filter(lambda x: x[:len(ID_BASE)+1] == ID_BASE + '-' and x[-4:] == '.txt', \
+					  os.listdir(ID_BASE + '/' + SUB_ID))
+	FILE_TXT		= map(lambda x: ID_BASE + '/' + SUB_ID + '/' + x, FILE_TXT) 
+	FILE_SDRF		= ID_BASE + '/' + sdrf_file    
+	FILE_KOC		= 'species/koc'                
+	FILE_TMP		= ID_BASE + '/' + SUB_ID + '/' +'tmp'
+	FILES_KO		= 'kos'    #directory
 	FILES_ARRAY 		= []
 	for st in IDS_ARRAY: 
-		FILES_ARRAY.append(st + ".adf.txt")
-	FA			= map(lambda x: parpath + '/' + currsubdir + '/' + x,FILES_ARRAY)
+		FILES_ARRAY.append(st + '.adf.txt')
+	FA			= map(lambda x: ID_BASE + '/' + x,FILES_ARRAY)
 										
 	
 	#----------------------------------------------------------------------------------------------#
 
-	def _create_file_quant_(target, source, env,parp = parpath,subd = ID_BASE,subsubd = SUB_ID): 
-		print "in create_file_quant22"
-		f = open(parp + '/' + subd + '/' + subsubd + '/' + target[0].rstr(),'w')
-		f.write("-1.5	-0.5	0.5	1.5	2.5	3.5	4.5\n")
+	def _create_file_quant_(target, source, env): 
+		print target[0].rstr()
+		f = open(target[0].rstr(),'w')
+		f.write('-1.5	-0.5	0.5	1.5	2.5	3.5	4.5\n')
 		f.close()
 
-	def _create_pre_pcl_(target, source, env, parp = parpath,subd = ID_BASE,subsubd = SUB_ID,FA = FA,FILE_TXT = FILE_TXT ):
-		os.popen('ruby ' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + string.join(FA, " ") + \
-			  ' < ' + string.join(FILE_TXT," ") + ' > ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr()) 
+	def _create_pre_pcl_(target, source, env,FA = FA,FILE_TXT = FILE_TXT ):
+		os.popen('ruby ' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + string.join(FA, ' ') + \
+			  ' < ' + string.join(FILE_TXT,' ') + ' > ' + target[0].rstr()) 
 		 
-	def _create_pcl_(target, source, env, parp = parpath,subd = ID_BASE,subsubd = SUB_ID,FILE_TMP=FILE_TMP):
-		os.popen('Normalizer -t pcl -T medmult < ' + source[0].rstr() + ' > '  + parp + '/' + subd + '/' + subsubd  + '/'+ FILE_TMP)
-		os.popen( '[ `wc -l < ' + parp + '/' + subd + '/' + subsubd  + '/' + FILE_TMP + '` -lt 3 ] && ' +\
-			   '( echo NULL >> '  + parp + '/' + subd + '/' + subsubd  + '/'+ FILE_TMP + ')' ) 
-		os.popen('KNNImputer < ' + source[0].rstr() + ' > '  + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr())
-		os.popen( '[ `wc -l < ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr() + '` -lt 3 ] && ' +\
-                        '( echo NULL >> '  + parp + '/' + subd + '/' + subsubd  + '/'+ target[0].rstr() + ')' ) 
+	def _create_pcl_(target, source, env, FILE_TMP=FILE_TMP):
+		os.popen('Normalizer -t pcl -T medmult < ' + source[0].rstr() + ' > ' +  FILE_TMP)
+		os.popen( '[ `wc -l < ' + FILE_TMP + '` -lt 3 ] && ' + '( echo NULL >> ' + FILE_TMP + ')' ) 
+		os.popen('KNNImputer < ' + source[0].rstr() + ' > '  + target[0].rstr())
+		os.popen( '[ `wc -l < ' + target[0].rstr() + '` -lt 3 ] && ' + '( echo NULL >> '  + target[0].rstr() + ')' ) 
 
-	def _create_dab_file_(target, source, env, parp = parpath, subd = ID_BASE, subsubd = SUB_ID):
-		os.popen('Distancer -o ' + parp + '/' + subd + '/' + subsubd  + '/'+ target[0].rstr() + ' < '+ source[0].rstr())
+	def _create_dab_file_(target, source, env):
+		os.popen('Distancer -o ' + target[0].rstr() + ' < '+ source[0].rstr())
 			
-
-	def _create_metadatapre_ (target,source,env, parp = parpath, subd = ID_BASE, subsubd = SUB_ID, FA = FA):
-		os.popen('ruby ' + source[0].rstr() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, " ") + \
-			 ' > ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr())  
+	def _create_metadatapre_(target,source,env, FA = FA):
+		print 'ruby ' + source[0].rstr() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, ' ') + ' > ' + target[0].rstr()
+		os.popen('ruby ' + source[0].rstr() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, ' ') + ' > ' + target[0].rstr())  
  		
+	def _create_metadada_(target, source, env, FA = FA):
+		print 'ruby ' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + source[2].rstr() + ' ' + string.join(FA, ' ') +\
+		        ' > ' + target[0].rstr()
+		os.popen('ruby ' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + source[2].rstr() + ' ' + string.join(FA, ' ') +\
+		        ' > ' + target[0].rstr())  
 
-	def _create_metadada_(target, source, env, parp = parpath, subd = ID_BASE, subsubd = SUB_ID, FA = FA):
-		os.popen('ruby ' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + source[2].rstr() + ' ' + string.join(FA, " ") +\
-		        ' > ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr())  
+  	def _create_ko_pre_pcl_(target, source, env, FILE_KOC = FILE_KOC):
+		os.popen('ruby ' + source[0].rstr() + ' ' + FILE_KOC + ' < ' + source[1].rstr() + ' > ' + target[0].rstr())
 
-  
-	def _create_ko_pre_pcl_(target, source, env, parp = parpath, subd = ID_BASE, subsubd = SUB_ID,FILE_KOC = FILE_KOC):
-		os.popen('ruby ' + source[0].rstr() + ' ' + FILE_KOC + ' < ' + source[1].rstr() + \
-				' > ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr())
-
-
-	
-	def _create_hko_(target, source, env, parp = parpath, subd = ID_BASE, subsubd = SUB_ID,FILES_KO = FILES_KO):
-		os.popen('Hubber -i ' + source[0].rstr() + ' ' + FILES_KO + \
-		         ' > ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr())
+	def _create_hko_(target, source, env, FILES_KO = FILES_KO):
+		os.popen('Hubber -i ' + source[0].rstr() + ' ' + FILES_KO + ' > ' + target[0].rstr())
 			
-	
-	def _create_wko_(target, source, env, parp = parpath, subd = ID_BASE, subsubd = SUB_ID,FILES_KO = FILES_KO):
-		os.popen('ruby ' + source[0].rstr() + ' ' + source[1].rstr() + \
-		         ' > ' + parp + '/' + subd + '/' + subsubd  + '/' + target[0].rstr())
+	def _create_wko_(target, source, env):
+		os.popen('ruby ' + source[0].rstr() + ' ' + source[1].rstr() + ' > ' + target[0].rstr())
 			
-	
-	def download_files_adftxt(ids_array , currsubdir, parpath, PROG_METADATA, FILE_SDRF , FILE_METADATAPRE,SUB_ID):
+	def download_files_adftxt(ids_array , currsubdir):
 		for arr_id in ids_array:
-			def _download_adftxt_ (target,source, env,ARRAY_ID = arr_id, currsubdir = currsubdir, parpath = parpath ):			
-				ARRAY_TYPE = string.split(ARRAY_ID,"-")[1]
-				os.popen('wget -O ' + parpath + '/' + currsubdir + '/' +ARRAY_ID + '.adf.txt' + \
+			def _download_adftxt_ (target, source, env, ARRAY_ID = arr_id, currsubdir = currsubdir):			
+				ARRAY_TYPE = string.split(ARRAY_ID,'-')[1]
+				os.popen('wget -O ' + currsubdir + '/' +ARRAY_ID + '.adf.txt' + \
 				  ' ' +repoconfig.arrayexpress.data_website[2] + ARRAY_TYPE + '/' + ARRAY_ID + '/' +ARRAY_ID + '.adf.txt')
-			#env.Command(['dwnld_adftxt_'+currsubdir + '_' + arr_id ],[], _download_adftxt_)   # TEMPORARY COMMENTED
+			#env.Command(['dwnld_adftxt_' + currsubdir + '_' + arr_id ], [], _download_adftxt_)   # TEMPORARY COMMENTED
 
 
 	#----------------------------------------------------------------------------------------------#
-	env.Command([FILE_PCLPRE,'prepcl_' + SUB_ID ],\
-		     [PROG_TXT2PCL, parpath + '/' + currsubdir + '/' + SUB_ID + '/' + FILE_METADATAPRE], 
-		    _create_pre_pcl_)
+	env.Command([FILE_PCLPRE],[PROG_TXT2PCL, FILE_METADATAPRE], _create_pre_pcl_)
 
-	env.Command([FILE_PCL, 'pcl_' + SUB_ID],\
-		     [parpath + '/' + currsubdir + '/' + SUB_ID + '/' +FILE_PCLPRE, 'prepcl_' + SUB_ID],\
-		     _create_pcl_)
+	env.Command([FILE_PCL, 'create_pcl'+ID_BASE+'_'+SUB_ID],[FILE_PCLPRE], _create_pcl_)
 
-	env.Command([FILE_DAB, 'dab_' + SUB_ID],\
-		     [parpath + '/' + currsubdir + '/' + SUB_ID + '/' +FILE_PCL, 'pcl_' + SUB_ID],\
-		     _create_dab_file_)	
+	env.Command([FILE_DAB, 'create_dab'+ID_BASE+'_'+SUB_ID ],[FILE_PCL], _create_dab_file_)	
 
-	env.Command([FILE_QUANT],[],_create_file_quant_)
+	env.Command([FILE_QUANT,'create_quant'+ID_BASE+'_'+SUB_ID ],[],_create_file_quant_)
 
 
-
-	# TODO: check it again - I think the "for" should be once
+	# TODO: check it again - I think the 'for' should be once
 	for arr in FILES_ARRAY: 
-		download_files_adftxt(IDS_ARRAY, currsubdir,parpath,PROG_METADATA, FILE_SDRF, FILE_METADATAPRE,SUB_ID )
+		download_files_adftxt(IDS_ARRAY, ID_BASE)
 
-				
-	env.Command([FILE_METADATAPRE],\
-		     [PROG_METADATA,FILE_SDRF],
-		     _create_metadatapre_)     #TODO add parameter 'dwnld_adftxt_'+currsubdir + '_' + arr_id	
+	env.Command([FILE_METADATAPRE],[PROG_METADATA,FILE_SDRF], _create_metadatapre_)     #TODO add parameter 'dwnld_adftxt_'+currsubdir + '_' + arr_id	
 
-	env.Command([FILE_METADATA],\
-		     [PROG_METADATA, parpath + '/' + currsubdir + '/' + SUB_ID + '/' +FILE_PCL, FILE_SDRF, 'pcl_' + SUB_ID],\
-		     _create_metadada_)	
+	env.Command([FILE_METADATA, 'create_metadata'+ID_BASE+'_'+SUB_ID],[PROG_METADATA, FILE_PCL, FILE_SDRF], _create_metadada_)	
 
-	env.Command([FILE_PCLKOPRE],\
-		     [PROG_PCL2KO, parpath + '/' + currsubdir + '/' + SUB_ID + '/' +FILE_PCL,'pcl_' + SUB_ID],\
-		     _create_ko_pre_pcl_)	
+	env.Command([FILE_PCLKOPRE, 'create_pclcopre'+ID_BASE+'_'+SUB_ID],[PROG_PCL2KO, FILE_PCL], _create_ko_pre_pcl_)	
 
+	env.Command([FILE_HKO, 'create_hko'+ID_BASE+'_'+SUB_ID], [FILE_DAB], _create_hko_)
 
-	env.Command([FILE_HKO, 'hko_' + SUB_ID],\
-		     [parpath + '/' + currsubdir + '/' + SUB_ID + '/' + FILE_DAB,'dab_' + SUB_ID],\
-		     _create_hko_)
-
-	env.Command([FILE_WKO],\
-		     [PROG_H2W,parpath + '/' + currsubdir + '/' + SUB_ID + '/' +FILE_HKO, 'hko_' + SUB_ID],\
-		     _create_wko_) 				
+	env.Command([FILE_WKO, 'create_wko'+ID_BASE+'_'+SUB_ID], [PROG_H2W,FILE_HKO], _create_wko_) 				
