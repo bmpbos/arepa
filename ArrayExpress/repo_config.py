@@ -14,5 +14,6 @@ intact = Repo( "IntAct",\
 arrayexpress = Repo( "ArrayExpress",\
 		     "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz",\
 		     ["http://www.ebi.ac.uk/microarray-as/ae/xml/experiments",\
-		      "ftp://ftp.ebi.ac.uk/pub/databases/microarray/data/experiment/"])
+		      "ftp://ftp.ebi.ac.uk/pub/databases/microarray/data/experiment/",\
+		      "ftp://ftp.ebi.ac.uk/pub/databases/microarray/data/array/"])
 

@@ -1,0 +1,120 @@
+
+import os, string
+import repo_config as repoconfig
+
+PARENT_PATH = os.getcwd()
+
+
+def create_ids_array(filename):
+	IDS_ARRAY = {}
+	f=open(filename)
+	titles= string.split(f.readline(), "\t") # titles
+	index = []
+	for i in range (len(titles)): 
+		if (string.strip(titles[i]) == "Array Design REF"):
+			index.append(i)
+			#break #  Is it may be more then 1 ?????
+	lines = f.readlines()
+	for line in lines:
+		
+		sl = string.split(line,"\t")
+		for j in index:
+			try:
+				if (sl[j]==""): continue
+				IDS_ARRAY[sl[j]] = "true"
+			except IndexError: 
+				continue
+	f.close()
+	return IDS_ARRAY
+
+def create_file_quant(target):  
+	f = open(target,'w')
+	f.write("-1.5	-0.5	0.5	1.5	2.5	3.5	4.5\n")
+	f.close()
+
+
+
+
+#def _create_kospcl_(target, source, env): 
+#	os.popen("Combiner E-*/*/*_w.txt > combiner_result")
+#kos.pcl:
+#		Combiner E-*/*/*_w.txt | grep -v EWEIGHT | \
+#		ruby ~/scripts/transpose.rb | KNNImputer -k 0 -m 0.333 -s 0 | \
+#		grep -v EWEIGHT | ruby ~/scripts/transpose.rb | \
+#		KNNImputer -k 0 -m 0.333 -s 1 | \
+#		ruby -pe '$$_ =~ /^([^\t]+)(.*)/; 
+#			if( $$. == 1 ); $$_ = $$1 + "	NAME	GWEIGHT"; 
+#			elsif( $$1 == "EWEIGHT" ); $$_ = $$1 + "		"; 
+#			else; $$_ = $$1 + "\t" + $$1 + "	1"; 
+#			end; 
+#			$$_ += $$2 + "\n"' > $@
+#
+	#os.popen("Combiner E-*/*/*_w.txt | grep -v EWEIGHT | ruby ~/scripts/transpose.rb | KNNImputer -k 0 -m 0.333 -s 0 | \
+	#	grep -v EWEIGHT | ruby ~/scripts/transpose.rb | KNNImputer -k 0 -m 0.333 -s 1 | "+\
+	#	"ruby -pe \'$$_ =~ /^([^\t]+)(.*)/; if( $$. == 1 ); $$_ = $$1 + \"	NAME	GWEIGHT\"; elsif( $$1 == \"EWEIGHT\" ); "+\
+	#		"$$_ = $$1 + \"		\"; else; $$_ = $$1 + \"\t\" + $$1 + \"	1\"; end; $$_ += $$2 + \"\n\"\' > " + target[0].rstr())
+
+
+
+
+
+def _run_subdirectories_(target, source, env): 
+	SUBDIRS = map(lambda y: string.split(y,'/')[1], map(lambda x: string.strip(x),os.popen("find . -maxdepth 1 -type d -name \"E-*\"").readlines()))
+	SUBDIRS = SUBDIRS[:10]  # TEMP!  TODO: REMOVE IT 
+	for subdir in SUBDIRS: 
+		ID			= subdir 
+		ID_TYPE		= string.split(ID,"-")[1]
+		FILE_ZIP		= ID + '.processed.1.zip'
+		FILE_SDRF		= ID + '.sdrf.txt'
+		PROG_ZIP2DIRS		= PARENT_PATH + "/zip2dirs.rb" # TODO use this parameter
+		
+
+		def _download_FILE_ZIP_(target, source, env, path2dwnld = ID_TYPE+"/"+ID+"/"+FILE_ZIP,currsubdir = ID,parpath = PARENT_PATH ): 
+			os.chdir(parpath +"/"+currsubdir)
+			os.popen("wget -N " + repoconfig.arrayexpress.data_website[1]+path2dwnld)	
+			os.chdir(parpath)
+			
+		def _download_FILE_SDRF_(target, source, env, path2dwnld = ID_TYPE+"/"+ID+"/"+FILE_SDRF,currsubdir = ID,parpath = PARENT_PATH): 
+			os.chdir(parpath +"/"+currsubdir)
+			os.popen("wget -N " + repoconfig.arrayexpress.data_website[1]+path2dwnld )
+			os.chdir(parpath)
+
+		def _zip2dirs_(target, source, env, currsubdir = ID, parpath = PARENT_PATH): 
+			os.chdir(parpath +"/"+currsubdir)
+			prog_zip2dir_path = parpath + "/" + "zip2dirs.rb"
+			
+			os.popen("ruby ../zip2dirs.rb"+" "+string.split(source[1].rstr(),"/")[1]+" "+ string.split(source[2].rstr(),"/")[1])  # TODO: CHECK IT AGAIN WITH FULL ./PATH
+			IDS_ARRAY = (create_ids_array(string.split(source[2].rstr(),"/")[1])).keys()
+			print "IDS_ARRAY", IDS_ARRAY
+			
+			listd = os.listdir(parpath +"/"+currsubdir)
+			flistd = filter(lambda x: x[:len(currsubdir) + 1] == currsubdir + '_', listd)
+			SUBSUBDIRS = filter(lambda x: os.path.isdir(parpath +"/"+currsubdir+ '/' + x), flistd)
+			print "SUBSUBDIRS " , SUBSUBDIRS 
+			sdrf_file = string.split(source[2].rstr(),"/")[1]
+			env.SConscript('SubSConscript', exports=['env','SUBSUBDIRS', 'currsubdir','IDS_ARRAY','parpath','sdrf_file'])
+			
+			print "____________________" 
+			os.chdir(parpath)
+
+	
+
+		#env.Command(['dwnld_FileZip_'+subdir],[], _download_FILE_ZIP_)  # TEMPORARY COMMENTED 
+		#env.Command(['dwnld_FileSdrf_'+subdir],[], _download_FILE_SDRF_) # TEMPORARY COMMENTED
+		
+		
+		#env.Command(['perform_zip2dir_'+subdir],[PROG_ZIP2DIRS, subdir+"/"+FILE_ZIP, subdir+"/"+FILE_SDRF ,'dwnld_FileZip_'+subdir,'dwnld_FileSdrf_'+subdir], _zip2dirs_)# TEMPORARY COMMENTED - replace with the next line
+
+		env.Command(['perform_zip2dir_'+subdir],[PROG_ZIP2DIRS, subdir+"/"+FILE_ZIP, subdir+"/"+FILE_SDRF], _zip2dirs_)
+
+		
+		
+
+
+
+
+
+env = Environment() 
+env.Command(['run_subdirs'],[],_run_subdirectories_)
+#env.Command(['kos.pcl'],['run_subdirs'],_create_kospcl_)
+
