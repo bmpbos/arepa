@@ -9,7 +9,7 @@ def create_ids_array(filename):
 	for i in range (len(titles)): 
 		if (string.strip(titles[i]) == 'Array Design REF'):
 			index.append(i)
-			#break #  Is it may be more then 1 ?????
+			#break #  Is it may be more then 1 ????? !!! 
 	lines = f.readlines()
 	for line in lines:
 		
