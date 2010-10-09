@@ -9,7 +9,7 @@ def create_ids_array(filename):
 	for i in range (len(titles)): 
 		if (string.strip(titles[i]) == 'Array Design REF'):
 			index.append(i)
-			#break #  Is it may be more then 1 ????? !!! 
+			#break #  It is may be more then 1 
 	lines = f.readlines()
 	for line in lines:
 		
@@ -33,8 +33,6 @@ def _run_subdirectories_(target, source, env):
 		FILE_SDRF		= ID + '.sdrf.txt'
 		PROG_ZIP2DIRS		= 'zip2dirs.rb' 
 
-		
-
 		def _download_FILE_ZIP_(target, source, env, path2dwnld = ID_TYPE + '/' + ID + '/' + FILE_ZIP,currsubdir = ID,FILE_ZIP = FILE_ZIP ): 
 			#os.chdir(parpath +'/'+currsubdir)
 			#os.popen('wget -N ' + repoconfig.arrayexpress.data_website[1]+path2dwnld)	
@@ -51,24 +49,18 @@ def _run_subdirectories_(target, source, env):
 
 		def _zip2dirs_(target, source, env, currsubdir = ID, PROG_ZIP2DIRS = PROG_ZIP2DIRS): 
 			os.popen('cd ' + currsubdir + ' && ' + './../' + PROG_ZIP2DIRS + ' ' + string.split(source[1].rstr(),'/')[1]+' '+ string.split(source[2].rstr(),'/')[1])  
-
 			IDS_ARRAY = (create_ids_array(source[2].rstr())).keys()
-			print 'IDS_ARRAY', IDS_ARRAY
-			
 			listd = os.listdir(currsubdir)
 			flistd = filter(lambda x: x[:len(currsubdir) + 1] == currsubdir + '_', listd)
-			SUBSUBDIRS = filter(lambda x: os.path.isdir(currsubdir+ '/' + x), flistd)
-			print 'SUBSUBDIRS ' , SUBSUBDIRS 
-
+			subsubdirs = filter(lambda x: os.path.isdir(currsubdir+ '/' + x), flistd)
 			sdrf_file = string.split(source[2].rstr(),'/')[1]
-			env.SConscript('SubSConscript', exports=['env','SUBSUBDIRS', 'currsubdir','IDS_ARRAY','sdrf_file'])
+			env.SConscript('SubSConscript', exports=['env','subsubdirs', 'currsubdir','IDS_ARRAY','sdrf_file'])
 			
 		#env.Command(['dwnld_FileZip_'+subdir],[], _download_FILE_ZIP_)  # TEMPORARY COMMENTED 
+
 		#env.Command(['dwnld_FileSdrf_'+subdir],[], _download_FILE_SDRF_) # TEMPORARY COMMENTED
 		
-		
 		#env.Command(['perform_zip2dir_' + subdir],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/'+FILE_SDRF ,'dwnld_FileZip_'+subdir,'dwnld_FileSdrf_'+subdir], _zip2dirs_)# TEMPORARY COMMENTED - replace with the next line
-
 		env.Command(['perform_zip2dir_' + subdir],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF], _zip2dirs_)
 
 env = Environment() 

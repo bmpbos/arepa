@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
 # Haemophilus influenzae symbols -> IDs
-C_astrMaps	= Dir.glob( "../../maps/*.txt" )
+#C_astrMaps	= Dir.glob( "../../maps/*.txt" )
+C_astrMaps	= Dir.glob( "maps/*.txt" )
+
 C_astrPres	= %w(Cj Ng Sa Ye Cd Rv Hi Mb Bb CBO Cg Ef FTT FTL HP Nm Pa Vc VCA Ecs Ba BSU RL lmo SCO Xf)
 
 def make_label( hashMetadata, hashhashMap, strToken )
@@ -82,7 +84,7 @@ astrADFs.each do |strADF|
 			hashhashMap[strFrom] = hashhashMap[strFrom.upcase] = hashTos = {}; end
 		hashTos[strTo] = true; end; end
 
-Dir.pwd( ) =~ /E-([^-]+)-\d+/
+strMetadata =~ /E-([^-]+)-\d+/
 strType = $1
 
 aiColumns = astrLabels = nil
