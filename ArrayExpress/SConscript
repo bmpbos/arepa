@@ -1,0 +1,31 @@
+import arepa
+import os
+
+Import( "c_fileTaxa" )
+Import( "pE" )
+
+c_strFileExperiments		= arepa.c_strTmp + "experiments"
+c_strFileIDsTXT				= arepa.c_strTmp + "ids.txt"
+c_strProgExperiments2IDs	= arepa.c_strSource + "experiments2ids.py"
+c_strSConscriptExp			= "SConscript.exp"
+c_strDir					= arepa.dir( pE )
+
+pE.Dir( arepa.c_strTmp )
+
+#arepa.download( pE, c_strFileExperiments,
+#	"http://www.ebi.ac.uk/microarray-as/ae/xml/experiments" )
+pE.NoClean( c_strFileExperiments )
+
+arepa.pipe( pE, c_strFileExperiments, c_strProgExperiments2IDs, c_strFileIDsTXT,
+	[[True, c_fileTaxa]] )
+
+def funcIDs( pE, strIDs ):
+	for strLine in open( strIDs ):
+		strID = strLine.strip( ).split( "\t" )[0]
+		pE.SConscript( c_strSConscriptExp, variant_dir = strID, duplicate = 0 )
+def funcArrayExpressTMP( target, source, env ):
+	strT, astrSs = arepa.ts( target, source )
+	return funcIDs( env, astrSs[0] )
+pE.Command( "ae.tmp", c_strFileIDsTXT, funcArrayExpressTMP )
+if os.path.isfile( c_strFileIDsTXT ):
+	funcIDs( pE, c_strFileIDsTXT )
