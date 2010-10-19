@@ -1,5 +1,8 @@
+Import('reponame')
 import os, string
 import repo_config as repoconfig
+
+#--------------------------------------------------------------------------------------------------------------------#
 
 def create_ids_array(filename):
 	IDS_ARRAY = {}
@@ -23,47 +26,46 @@ def create_ids_array(filename):
 	f.close()
 	return IDS_ARRAY
 
-def _run_subdirectories_(target, source, env): 
-	SUBDIRS = map(lambda y: string.split(y,'/')[1], map(lambda x: string.strip(x),os.popen('find . -maxdepth 1 -type d -name \'E-*\'').readlines()))
-	SUBDIRS = SUBDIRS[:10]  # TEMP!  TODO: REMOVE IT 
+def _run_subdirectories_(target, source, env, reponame = reponame): 
+	SUBDIRS = map(lambda y: string.split(y,'/')[1], map(lambda x: string.strip(x),os.popen('cd ' + reponame + '&&' + 'find . -maxdepth 1 -type d -name \"E-*\"').readlines()))
 	for subdir in SUBDIRS: 
+		curd = subdir
+		subdir  = reponame + '/' + subdir
 		ID			= subdir 
 		ID_TYPE		= string.split(ID,'-')[1]
-		FILE_ZIP		= ID + '.processed.1.zip'
-		FILE_SDRF		= ID + '.sdrf.txt'
-		PROG_ZIP2DIRS		= 'zip2dirs.rb' 
-
-		def _download_FILE_ZIP_(target, source, env, path2dwnld = ID_TYPE + '/' + ID + '/' + FILE_ZIP,currsubdir = ID,FILE_ZIP = FILE_ZIP ): 
-			#os.chdir(parpath +'/'+currsubdir)
-			#os.popen('wget -N ' + repoconfig.arrayexpress.data_website[1]+path2dwnld)	
-			#os.chdir(parpath)
-			os.popen('wget -O currsubdir + '/' + FILE_ZIP -N ' + repoconfig.arrayexpress.data_website[1] + path2dwnld)
-			
-		def _download_FILE_SDRF_(target, source, env, path2dwnld = ID_TYPE + '/' + ID + '/' + FILE_SDRF,currsubdir = ID,FILE_SDRF =FILE_SDRF): 
-			#os.chdir(parpath +'/'+currsubdir)
-			#os.popen('wget -N ' + repoconfig.arrayexpress.data_website[1]+path2dwnld )
-			#os.chdir(parpath)
-			os.popen('wget -O currsubdir + '/' + FILE_SDRF -N ' + repoconfig.arrayexpress.data_website[1]+path2dwnld )
-
-
-
-		def _zip2dirs_(target, source, env, currsubdir = ID, PROG_ZIP2DIRS = PROG_ZIP2DIRS): 
-			os.popen('cd ' + currsubdir + ' && ' + './../' + PROG_ZIP2DIRS + ' ' + string.split(source[1].rstr(),'/')[1]+' '+ string.split(source[2].rstr(),'/')[1])  
-			IDS_ARRAY = (create_ids_array(source[2].rstr())).keys()
-			listd = os.listdir(currsubdir)
-			flistd = filter(lambda x: x[:len(currsubdir) + 1] == currsubdir + '_', listd)
-			subsubdirs = filter(lambda x: os.path.isdir(currsubdir+ '/' + x), flistd)
-			sdrf_file = string.split(source[2].rstr(),'/')[1]
-			env.SConscript('SubSConscript', exports=['env','subsubdirs', 'currsubdir','IDS_ARRAY','sdrf_file'])
-			
-		#env.Command(['dwnld_FileZip_'+subdir],[], _download_FILE_ZIP_)  # TEMPORARY COMMENTED 
-
-		#env.Command(['dwnld_FileSdrf_'+subdir],[], _download_FILE_SDRF_) # TEMPORARY COMMENTED
+		FILE_ZIP		= curd  + '.processed.1.zip'
+		FILE_SDRF		= curd  + '.sdrf.txt'
+		PROG_ZIP2DIRS		= reponame + '/zip2dirs.rb' 
 		
-		#env.Command(['perform_zip2dir_' + subdir],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/'+FILE_SDRF ,'dwnld_FileZip_'+subdir,'dwnld_FileSdrf_'+subdir], _zip2dirs_)# TEMPORARY COMMENTED - replace with the next line
-		env.Command(['perform_zip2dir_' + subdir],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF], _zip2dirs_)
 
-env = Environment() 
+		def _download_FILE_ZIP_(target, source, env, path2dwnld = ID_TYPE + '/' + curd + '/' + FILE_ZIP, currsubdir = ID): 
+			os.popen('cd ' + currsubdir + ' && wget -N ' + repoconfig.arrayexpress.data_website[1] + path2dwnld)
+			
+		def _download_FILE_SDRF_(target, source, env, path2dwnld = ID_TYPE + '/' + curd + '/' + FILE_SDRF, currsubdir = ID): 
+			os.popen('cd ' + currsubdir + ' && wget -N ' + repoconfig.arrayexpress.data_website[1]+path2dwnld )
+
+		def _zip2dirs_(target, source, env, currsubdir = ID,FILE_ZIP = FILE_ZIP, FILE_SDRF = FILE_SDRF ,curd =curd ): 
+			print source[0].get_abspath(), source[0].rstr()
+			os.popen('cd ' + currsubdir + ' && ' + source[0].get_abspath() + ' ' + string.split(source[1].rstr(),'/')[-1:][0]+' '+ string.split(source[2].rstr(),'/')[-1:][0])  
+			IDS_ARRAY = (create_ids_array(source[2].rstr())).keys()
+			print IDS_ARRAY
+			listd = os.listdir(currsubdir)
+			flistd = filter(lambda x: x[:len(curd) + 1] == curd + '_', listd)
+			subsubdirs = filter(lambda x: os.path.isdir(currsubdir+ '/' + x), flistd)
+			sdrf_file = string.split(source[2].rstr(),'/')[-1:]
+			#env.SConscript(reponame + '/SubSConscript', exports=['env','subsubdirs', 'currsubdir','IDS_ARRAY','sdrf_file','reponame'])
+			
+		#env.Command([subdir + '/' + FILE_ZIP, 'dwnld_FileZip_' + curd ], [], _download_FILE_ZIP_)   #TEMPORARY COMMENTED
+
+		#env.Command([subdir + '/' + FILE_SDRF, 'dwnld_FileSdrf_' + curd ], [], _download_FILE_SDRF_)   #TEMPORARY COMMENTED
+		
+		#env.Command(['perform_zip2dir_' + curd ],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF ,\
+		#		 'dwnld_FileZip_' + curd , 'dwnld_FileSdrf_' + curd ], _zip2dirs_)
+		env.Command(['perform_zip2dir_' + curd ],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF], _zip2dirs_)
+
+
+
+env = Environment() # imported from MainSConscript
 env.Command(['run_subdirs'],[],_run_subdirectories_)
 
 

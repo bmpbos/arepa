@@ -1,4 +1,6 @@
-import os, string
+#Import('env')
+
+import os, string, re
 import repo_config as repoconfig
 
 path2scripts = os.getcwd()
@@ -6,11 +8,17 @@ import sys
 sys.path.append(string.join(string.split(path2scripts,'/')[:-1], '/')+'/Scripts')
 import shared_funcs as shf
 
+
+#------------------------------------------------------------------------------------------------#
+
 def _download_taxdump_(target, source, env): 
 	os.popen('wget -N ' + repoconfig.shared_taxonomy_website)
 
+#---THIS FUNCTION MOVED TO SHARED---#
 def _untar_(target, source, env): 
 	os.popen('tar -xzf ' + source[0].rstr())
+#---THIS FUNCTION MOVED TO SHARED---#
+
 
 def _download_experiments_(target, source, env): 
 	os.popen('wget -N ' + repoconfig.arrayexpress.data_website[0])
@@ -20,8 +28,28 @@ def _run_shellcmd_C21_ (target, source, env):
 	os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' < ' + source[2].rstr() + ' > ' + target[0].rstr()) 
 
 def _process_data_(target, source, env): 
-	os.popen(source[0].get_abspath() + ' < ' + source[1].rstr())
-	SConscript('SConscript', exports=['env'])
+	#os.popen(source[0].get_abspath() + ' < ' + source[1].rstr())
+	reponame = string.join(string.split(source[0].get_abspath(),'/')[:-1],'/')
+	
+	f = open( source[1].rstr(), 'r')
+	while 1:
+		line = f.readline()
+		if line == '': break
+
+		# here check the line format
+		try:
+			re.match('E-([^-]+)-\d' ,line).group(0)
+		except AttributeError:
+			print ( "WARN - illegal ID: " + line )
+			continue
+
+		try:
+        		os.makedirs(reponame + '/' + string.strip(line))
+		except:
+			continue
+	f.close()
+	SConscript(reponame + '/SConscript', exports=['reponame'])
+
 
 #-------------------------This function currently not in use -------------------------------------#
 
@@ -53,14 +81,13 @@ def _create_kospcl_(target, source, env):
 
 #------------------------------------------------------------------------------------------------#	
 	
-env = Environment() 
+env = Environment() # imported from SConstruct
 
 #env.Command(['dwnld_taxdump'], [], _download_taxdump_) # TEMPORARY COMMENTED
 
-#env.Command(['names.dmp', 'nodes.dmp'], ['taxdump.tar.gz', 'dwnld_taxdump'], _untar_)# TEMPORARY COMMENTED replace with the following line
-env.Command(['names.dmp', 'nodes.dmp'], ['taxdump.tar.gz'], _untar_)
+#env.Command(['names.dmp', 'nodes.dmp'], ['taxdump.tar.gz', 'dwnld_taxdump'], shf._untar_)# TEMPORARY COMMENTED replace with the following line
+env.Command(['names.dmp', 'nodes.dmp'], ['taxdump.tar.gz'], shf._untar_)
 
-####TEMPORARY COMMENTED  !!!!!!!!!!!env.Command(['species.txt'], ['nodes2species.rb', 'names.dmp', 'nodes.dmp'], _run_shellcmd_C21_)
 env.Command(['species.txt'], ['nodes2species.rb', 'names.dmp', 'nodes.dmp'],shf._runshcmd2_)
 
 #env.Command(['dwnld_arrayexpress'], [], _download_experiments_)# TEMPORARY COMMENTED

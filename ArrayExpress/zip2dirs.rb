@@ -27,7 +27,7 @@ astrFiles.each do |strFile|
 		raise( "Illegal extracted file: " + strFile ); end
 	strDir = strID + "_" + $1
 	`mkdir -p #{strDir}`
-	`mv #{strFile} #{strDir}`
-	File.open( strDir + "/Makefile", "w" ) do |fileOut|
-		fileOut.puts( "IDS_ARRAY	:= " + hashArrays.keys.join( " " ) )
-		fileOut.puts( "include ../../Makefile.subdirectory" ); end; end
+	`mv #{strFile} #{strDir}`; end
+#	 File.open( strDir + "/Makefile", "w" ) do |fileOut|
+#		fileOut.puts( "IDS_ARRAY	:= " + hashArrays.keys.join( " " ) )
+#		fileOut.puts( "include ../../Makefile.subdirectory" ); end; end

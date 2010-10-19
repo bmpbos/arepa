@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
-C_astrInclude	= ["Archaea", "Bacteria", "Viruses"]
+#C_astrInclude	= ["Archaea", "Bacteria", "Viruses"]
+C_astrInclude	= ["Plasmodium falciparum"]
 
 def output( iID, aaiChildren, aiNames )
 

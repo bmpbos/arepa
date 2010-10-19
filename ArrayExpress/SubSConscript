@@ -1,5 +1,9 @@
-Import('env','subsubdirs', 'currsubdir', 'IDS_ARRAY','sdrf_file')
+Import('env','subsubdirs', 'currsubdir', 'IDS_ARRAY','sdrf_file','reponame')
 import os, string
+import repo_config as repoconfig
+import shared_funcs as shf
+
+#---------------------------------------------------------------------------------------------------#
 
 for subsubdir in subsubdirs:
 	SUB_ID 		= subsubdir
@@ -25,22 +29,25 @@ for subsubdir in subsubdirs:
 	FILE_SDRF		= ID_BASE + '/' + sdrf_file    
 	FILE_KOC		= 'species/koc'                
 	FILE_TMP		= ID_BASE + '/' + SUB_ID + '/' +'tmp'
-	#FILES_KO		= 'kos/*'    
+	FILES_KO		= 'kos/*'    
 	FILES_ARRAY 		= []
 	for st in IDS_ARRAY: FILES_ARRAY.append(st + '.adf.txt')
 	FA			= map(lambda x: ID_BASE + '/' + x,FILES_ARRAY)
-										
-	
-	#----------------------------------------------------------------------------------------------#
 
+
+	#----------------------------------------------------------------------------------------------#
+	
 	def _create_file_quant_(target, source, env): 
 		f = open(target[0].rstr(),'w')
 		f.write('-1.5	-0.5	0.5	1.5	2.5	3.5	4.5\n')
 		f.close()
 
+#------this func not in use - moved to shared--------#	
 	def _create_pre_pcl_(target, source, env,FA = FA,FILE_TXT = FILE_TXT ):
-		os.popen('./' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + string.join(FA, ' ') + \
+		os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' ' + string.join(FA, ' ') + \
 			  ' < ' + string.join(FILE_TXT,' ') + ' > ' + target[0].rstr()) 
+#------this func not in use - moved to shared--------#	
+
 		 
 	def _create_pcl_(target, source, env, FILE_TMP=FILE_TMP):
 		os.popen('Normalizer -t pcl -T medmult < ' + source[0].rstr() + ' > ' +  FILE_TMP)
@@ -50,24 +57,22 @@ for subsubdir in subsubdirs:
 
 	def _create_dab_file_(target, source, env):
 		os.popen('Distancer -o ' + target[0].rstr() + ' < '+ source[0].rstr())
-			
+	
+		
 	def _create_metadatapre_(target,source,env, FA = FA):
-		os.popen('ruby ' + source[0].rstr() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, ' ') + ' > ' + target[0].rstr())  
- 		
+		os.popen(source[0].get_abspath() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, ' ') + ' > ' + target[0].rstr())  
+
+#------this func not in use - moved to shared--------#
 	def _create_metadada_(target, source, env, FA = FA):
-		os.popen('./' + source[0].rstr() + ' ' + source[1].rstr() + ' ' + source[2].rstr() + ' ' + string.join(FA, ' ') +\
+		os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' ' + source[2].rstr() + ' ' + string.join(FA, ' ') +\
 		        ' > ' + target[0].rstr())  
+#------this func not in use - moved to shared--------#	
+	
 
-	def download_files_adftxt(ids_array , currsubdir):
-		for arr_id in ids_array:
-			def _download_adftxt_ (target, source, env, ARRAY_ID = arr_id, currsubdir = currsubdir):			
-				ARRAY_TYPE = string.split(ARRAY_ID,'-')[1]
-				os.popen('wget -O ' + currsubdir + '/' +ARRAY_ID + '.adf.txt' + \
-				  ' ' +repoconfig.arrayexpress.data_website[2] + ARRAY_TYPE + '/' + ARRAY_ID + '/' +ARRAY_ID + '.adf.txt')
-			#env.Command(['dwnld_adftxt_' + currsubdir + '_' + arr_id ], [], _download_adftxt_)   # TEMPORARY COMMENTED
-
+#------this func not in use - moved to shared--------#	
   	def _create_ko_pre_pcl_(target, source, env, FILE_KOC = FILE_KOC):
-		os.popen('./' + source[0].rstr() + ' ' + FILE_KOC + ' < ' + source[1].rstr() + ' > ' + target[0].rstr())
+		os.popen(source[0].get_abspath() + ' ' + FILE_KOC + ' < ' + source[1].rstr() + ' > ' + target[0].rstr())
+#------this func not in use - moved to shared--------#	
 
 
 	#-------------------------Those funcs currently not in use check it again in the future--------#
@@ -75,11 +80,20 @@ for subsubdir in subsubdirs:
 		os.popen('Hubber -i ' + source[0].rstr() + ' ' + FILES_KO + ' > ' + target[0].rstr())
 			
 	def _create_wko_(target, source, env):
-		os.popen('./' + source[0].rstr() + ' ' + source[1].rstr() + ' > ' + target[0].rstr())
+		os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' > ' + target[0].rstr())
 	#----------------------------------------------------------------------------------------------#
 
+	for arr_id in IDS_ARRAY:
+		def _download_adftxt_ (target, source, env, ARRAY_ID = arr_id, currsubdir = currsubdir):			
+				ARRAY_TYPE = string.split(ARRAY_ID,'-')[1]
+				os.popen('cd ' + currsubdir + ' && ' +'wget -N ' +\
+				  repoconfig.arrayexpress.data_website[2] + ARRAY_TYPE + '/' + ARRAY_ID + '/' +ARRAY_ID + '.adf.txt')
+		env.Command(['dwnld_adftxt_' + currsubdir + '_' + arr_id ], [], _download_adftxt_)   
 
-	env.Command([FILE_PCLPRE],[PROG_TXT2PCL, FILE_METADATAPRE], _create_pre_pcl_)
+	env.Command([FILE_METADATAPRE],[PROG_METADATA,FILE_SDRF] + FA, shf._runshcmd1_)  								#his func instead  _create_metadatapre_ - moved to shared
+
+	#TODO: check what happen it more then one txt file , if it is possible???? If YES - change this func.
+	env.Command([FILE_PCLPRE],[PROG_TXT2PCL, '', FILE_METADATAPRE] + FA + FILE_TXT,  shf._runshcmd2_ ) 					#his func instead  _create_pre_pcl_ - moved to shared
 
 	env.Command([FILE_PCL, 'create_pcl'+ID_BASE+'_'+SUB_ID],[FILE_PCLPRE], _create_pcl_)
 
@@ -87,15 +101,10 @@ for subsubdir in subsubdirs:
 
 	env.Command([FILE_QUANT,'create_quant'+ID_BASE+'_'+SUB_ID ],[],_create_file_quant_)
 
-	# TODO: check it again - I think the 'for' should be once
-	for arr in FILES_ARRAY: 
-		download_files_adftxt(IDS_ARRAY, ID_BASE)
+	env.Command([FILE_METADATA, 'create_metadata'+ID_BASE+'_'+SUB_ID],[PROG_METADATA, FILE_PCL, FILE_SDRF] + FA, shf._runshcmd1_)	  	#this func instead _create_metadada_ - moved to shared
 
-	env.Command([FILE_METADATAPRE],[PROG_METADATA,FILE_SDRF], _create_metadatapre_)     #TODO add parameter 'dwnld_adftxt_'+currsubdir + '_' + arr_id	
-
-	env.Command([FILE_METADATA, 'create_metadata'+ID_BASE+'_'+SUB_ID],[PROG_METADATA, FILE_PCL, FILE_SDRF], _create_metadada_)	
-
-	env.Command([FILE_PCLKOPRE, 'create_pclcopre'+ID_BASE+'_'+SUB_ID],[PROG_PCL2KO, FILE_PCL], _create_ko_pre_pcl_)	
+	env.Command([FILE_PCLKOPRE, 'create_pclcopre'+ID_BASE+'_'+SUB_ID],[PROG_PCL2KO, FILE_KOC, FILE_PCL], shf._runshcmd2_ ) 		#this func instead _create_ko_pre_pcl_ - moved to shared
+	
 
 
 	#env.Command([FILE_HKO, 'create_hko'+ID_BASE+'_'+SUB_ID], [FILE_DAB], _create_hko_)
