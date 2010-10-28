@@ -7,7 +7,7 @@ import string
 #//=========================================================================================//
 
 #   SOURCE_0 SOURCE_1 SOURCE_2 .... SOURCE_last > TARGET_0
-def _runshcmd1_(target,source,env):   # target,source - lists of strings
+def _shcmd_Ni_1o_(target,source,env):   # target,source - lists of strings
 	print os.getcwd() 
 	source_strings = []
 	source_strings.append(source[0].get_abspath())
@@ -18,7 +18,7 @@ def _runshcmd1_(target,source,env):   # target,source - lists of strings
 
 
 #   SOURCE_0 SOURCE_1 SOURCE_2 .... SOURCE_last-1 < SOURCE_last > TARGET_0
-def _runshcmd2_(target,source,env):   # target,source - lists of strings
+def _shcmd_Nm1i_1i_1o_(target,source,env):   # target,source - lists of strings
 	print os.getcwd() 
 	source_strings = []
 	source_strings.append(source[0].get_abspath())
@@ -26,6 +26,12 @@ def _runshcmd2_(target,source,env):   # target,source - lists of strings
 		source_strings.append(source[i].rstr())
 	os.popen(string.join(source_strings,' ') + ' < ' + source[len(source) - 1].rstr()  +\
 		  ' > ' + target[0].rstr())
+
+
+#   SOURCE_0 SOURCE_1 SOURCE_2 .... SOURCE_last-2 < SOURCE_last-1 > TARGET_0      - Last input is a FLAG
+def _shcmd_Nm1i_1i_1o_iF_(target,source,env):   # target,source - lists of strings
+	env.Command(target,source[:-1], _shcmd_Nm1i_1i_1o_)
+
 
 #def run_pipe_cmds ([cmd1,cmd2,.....]):
 
@@ -46,7 +52,9 @@ def _runshcmd2_(target,source,env):   # target,source - lists of strings
 #def _KNNImputer_ (target,source,env):
  
 
-#def _Distancer_ (target,source,env): 
+def _Distancer_1o_1i_ (target,source,env): 
+	os.popen('Distancer -o ' + target[0].rstr() + ' < '+ source[0].rstr())
+
 
 
 #def _Combiner_ (target,source,env): 
@@ -59,8 +67,23 @@ def _runshcmd2_(target,source,env):   # target,source - lists of strings
 #//========================Download and Uncompress==========================================//
 #//=========================================================================================//
 
+# target[1].rstr() - string to download, target[0].rstr() - directory of destination  
+def _download_mN_ (target,source,env): 
+	print "download_mN in shared funcs", os.getcwd()
+	print target[0].rstr()
+	print target[1].rstr()
 
-#def _download_ (target,source,env): 
+	os.popen('cd ' + target[0].rstr() + ' && wget -N ' + target[1].rstr())
+
+
+# target[1].rstr() - string to download, target[0].rstr() - directory of destination  
+def _download_mmts_ (target,source,env): 
+	print "download_mmts in shared funcs", os.getcwd()
+	print target[0].rstr()
+	print target[1].rstr()
+
+	os.popen('cd ' + target[0].rstr() + ' && wget --timestamping ' + target[1].rstr())
+
 
 def _untar_ (target,source,env): 
 	print 'UNTAR in shared funcs', os.getcwd()
@@ -92,11 +115,3 @@ def _untar_ (target,source,env):
 #//=========================================================================================//	
 
 #def _get_species_description_ (target,source,env):   #hash table {species id : description} 
-
-#//=========================================================================================//
-#//===========================Species=======================================================//
-#//=========================================================================================//	
-
-
-
-

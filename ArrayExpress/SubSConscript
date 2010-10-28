@@ -3,15 +3,19 @@ import os, string
 import repo_config as repoconfig
 import shared_funcs as shf
 
-#---------------------------------------------------------------------------------------------------#
 
+#---------------------------------------------------------------------------------------------------#
+#env =  Environment() 
+print subsubdirs, '!!!!!!!!!!!!!!!!1'
+print os.getcwd(), "os.getcwd()"
 for subsubdir in subsubdirs:
+	print subsubdir 
 	SUB_ID 		= subsubdir
-	ID_BASE		= currsubdir
+	ID_BASE		= string.split(currsubdir,'/')[-1:][0]
 	PROG_TXT2PCL		= 'txt2pcl.rb'
 	PROG_METADATA		= 'metadata.rb'
 	PROG_PCL2KO		= 'pcl2ko.rb'
-	PROG_H2W		= 'h2w.rb'
+	#PROG_H2W		= 'h2w.rb'
 	FILE_PCL		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.pcl'
 	FILE_PCLPRE		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_pre.pcl'
 	FILE_PCLKO		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko.pcl'
@@ -25,8 +29,10 @@ for subsubdir in subsubdirs:
 	FILE_QUANT		= ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.quant'
 	FILE_TXT		= filter(lambda x: x[:len(ID_BASE)+1] == ID_BASE + '-' and x[-4:] == '.txt', \
 					  os.listdir(ID_BASE + '/' + SUB_ID))
-	FILE_TXT		= map(lambda x: ID_BASE + '/' + SUB_ID + '/' + x, FILE_TXT) 
-	FILE_SDRF		= ID_BASE + '/' + sdrf_file    
+
+	FILE_TXT		= map(lambda x: reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + x, FILE_TXT) 
+	FILE_SDRF		= ID_BASE + '/' + sdrf_file   
+
 	FILE_KOC		= 'species/koc'                
 	FILE_TMP		= ID_BASE + '/' + SUB_ID + '/' +'tmp'
 	FILES_KO		= 'kos/*'    
@@ -34,7 +40,10 @@ for subsubdir in subsubdirs:
 	for st in IDS_ARRAY: FILES_ARRAY.append(st + '.adf.txt')
 	FA			= map(lambda x: ID_BASE + '/' + x,FILES_ARRAY)
 
+	print "IN SUB SCONSCRIPT", FA
+	env.Command(['stam_is_done_'+ subsubdir ],[PROG_TXT2PCL],_stam_)
 
+	
 	#----------------------------------------------------------------------------------------------#
 	
 	def _create_file_quant_(target, source, env): 
@@ -42,11 +51,11 @@ for subsubdir in subsubdirs:
 		f.write('-1.5	-0.5	0.5	1.5	2.5	3.5	4.5\n')
 		f.close()
 
-#------this func not in use - moved to shared--------#	
+	#------this func not in use - moved to shared--------#	
 	def _create_pre_pcl_(target, source, env,FA = FA,FILE_TXT = FILE_TXT ):
 		os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' ' + string.join(FA, ' ') + \
 			  ' < ' + string.join(FILE_TXT,' ') + ' > ' + target[0].rstr()) 
-#------this func not in use - moved to shared--------#	
+	#------this func not in use - moved to shared--------#	
 
 		 
 	def _create_pcl_(target, source, env, FILE_TMP=FILE_TMP):
@@ -62,17 +71,17 @@ for subsubdir in subsubdirs:
 	def _create_metadatapre_(target,source,env, FA = FA):
 		os.popen(source[0].get_abspath() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, ' ') + ' > ' + target[0].rstr())  
 
-#------this func not in use - moved to shared--------#
+	#-----this func not in use - moved to shared--------#
 	def _create_metadada_(target, source, env, FA = FA):
 		os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' ' + source[2].rstr() + ' ' + string.join(FA, ' ') +\
 		        ' > ' + target[0].rstr())  
-#------this func not in use - moved to shared--------#	
+	#-----this func not in use - moved to shared--------#	
 	
 
-#------this func not in use - moved to shared--------#	
+	#-----this func not in use - moved to shared--------#	
   	def _create_ko_pre_pcl_(target, source, env, FILE_KOC = FILE_KOC):
 		os.popen(source[0].get_abspath() + ' ' + FILE_KOC + ' < ' + source[1].rstr() + ' > ' + target[0].rstr())
-#------this func not in use - moved to shared--------#	
+	#-----this func not in use - moved to shared--------#	
 
 
 	#-------------------------Those funcs currently not in use check it again in the future--------#
@@ -83,32 +92,35 @@ for subsubdir in subsubdirs:
 		os.popen(source[0].get_abspath() + ' ' + source[1].rstr() + ' > ' + target[0].rstr())
 	#----------------------------------------------------------------------------------------------#
 
-	for arr_id in IDS_ARRAY:
-		def _download_adftxt_ (target, source, env, ARRAY_ID = arr_id, currsubdir = currsubdir):			
-				ARRAY_TYPE = string.split(ARRAY_ID,'-')[1]
-				os.popen('cd ' + currsubdir + ' && ' +'wget -N ' +\
-				  repoconfig.arrayexpress.data_website[2] + ARRAY_TYPE + '/' + ARRAY_ID + '/' +ARRAY_ID + '.adf.txt')
-		env.Command(['dwnld_adftxt_' + currsubdir + '_' + arr_id ], [], _download_adftxt_)   
+	#for arr_id in IDS_ARRAY:
+		#def _download_adftxt_ (target, source, env, ARRAY_ID = arr_id, currsubdir = currsubdir):	
+		#	print "in download_adftxt@@@@@@@@@@@@@@@@", currsubdir 
+		#	ARRAY_TYPE = string.split(ARRAY_ID,'-')[1]
+		#	os.popen('cd ' + currsubdir + ' && ' +'wget -N ' +\
+		#		  repoconfig.arrayexpress.data_website[2] + ARRAY_TYPE + '/' + ARRAY_ID + '/' +ARRAY_ID + '.adf.txt')
+		
+		#env.Command([ currsubdir + '/' + arr_id + '.adf.txt','dwnld_adftxt_' + ID_BASE+ '_' + arr_id ], [], _download_adftxt_)   
+	
 
-	env.Command([FILE_METADATAPRE],[PROG_METADATA,FILE_SDRF] + FA, shf._runshcmd1_)  								#his func instead  _create_metadatapre_ - moved to shared
+	env.Command([FILE_METADATAPRE, 'METADATAPRE'+ID_BASE],[PROG_METADATA,FILE_SDRF], _create_metadatapre_)
 
 	#TODO: check what happen it more then one txt file , if it is possible???? If YES - change this func.
-	env.Command([FILE_PCLPRE],[PROG_TXT2PCL, '', FILE_METADATAPRE] + FA + FILE_TXT,  shf._runshcmd2_ ) 					#his func instead  _create_pre_pcl_ - moved to shared
+	env.Command([FILE_PCLPRE, 'FILE_PCLPRE' + ID_BASE],[PROG_TXT2PCL, FILE_METADATAPRE] + FA + FILE_TXT,  shf._shcmd_Nm1i_1i_1o_ ) 					#this func instead  _create_pre_pcl_ - moved to shared
 
-	env.Command([FILE_PCL, 'create_pcl'+ID_BASE+'_'+SUB_ID],[FILE_PCLPRE], _create_pcl_)
+	env.Command([FILE_PCL, 'create_pcl' + '_' + SUB_ID],[FILE_PCLPRE], _create_pcl_)
 
-	env.Command([FILE_DAB, 'create_dab'+ID_BASE+'_'+SUB_ID ],[FILE_PCL], _create_dab_file_)	
+	env.Command([FILE_DAB, 'create_dab' + '_' + SUB_ID ],[FILE_PCL], _create_dab_file_)	
 
-	env.Command([FILE_QUANT,'create_quant'+ID_BASE+'_'+SUB_ID ],[],_create_file_quant_)
+	env.Command([FILE_QUANT,'create_quant' + '_' + SUB_ID ],[],_create_file_quant_)
 
-	env.Command([FILE_METADATA, 'create_metadata'+ID_BASE+'_'+SUB_ID],[PROG_METADATA, FILE_PCL, FILE_SDRF] + FA, shf._runshcmd1_)	  	#this func instead _create_metadada_ - moved to shared
+	env.Command([FILE_METADATA, 'create_metadata' + '_' + SUB_ID],[PROG_METADATA, FILE_PCL, FILE_SDRF] + FA, shf._shcmd_Ni_1o_)	  	#this func instead _create_metadada_ - moved to shared
 
-	env.Command([FILE_PCLKOPRE, 'create_pclcopre'+ID_BASE+'_'+SUB_ID],[PROG_PCL2KO, FILE_KOC, FILE_PCL], shf._runshcmd2_ ) 		#this func instead _create_ko_pre_pcl_ - moved to shared
+	env.Command([FILE_PCLKOPRE, 'create_pclcopre' + '_' + SUB_ID],[PROG_PCL2KO, FILE_KOC, FILE_PCL], shf._shcmd_Nm1i_1i_1o_ ) 		#this func instead _create_ko_pre_pcl_ - moved to shared
 	
 
 
-	#env.Command([FILE_HKO, 'create_hko'+ID_BASE+'_'+SUB_ID], [FILE_DAB], _create_hko_)
-	#env.Command([FILE_WKO, 'create_wko'+ID_BASE+'_'+SUB_ID], [PROG_H2W,FILE_HKO], _create_wko_) 	
+	#env.Command([FILE_HKO, 'create_hko' + '_'+SUB_ID], [FILE_DAB], _create_hko_)
+	#env.Command([FILE_WKO, 'create_wko' + '_'+SUB_ID], [PROG_H2W,FILE_HKO], _create_wko_) 	
 
 
 
@@ -123,3 +135,5 @@ for subsubdir in subsubdirs:
 
 
 			
+
+

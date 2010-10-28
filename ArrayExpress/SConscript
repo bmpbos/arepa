@@ -1,7 +1,7 @@
 Import('reponame')
 import os, string
 import repo_config as repoconfig
-
+import shared_funcs as shf
 #--------------------------------------------------------------------------------------------------------------------#
 
 def create_ids_array(filename):
@@ -26,46 +26,103 @@ def create_ids_array(filename):
 	f.close()
 	return IDS_ARRAY
 
+def _create_file_quant_(target, source, env): 
+		f = open(target[0].rstr(),'w')
+		f.write('-1.5	-0.5	0.5	1.5	2.5	3.5	4.5\n')
+		f.close()
+
+
 def _run_subdirectories_(target, source, env, reponame = reponame): 
 	SUBDIRS = map(lambda y: string.split(y,'/')[1], map(lambda x: string.strip(x),os.popen('cd ' + reponame + '&&' + 'find . -maxdepth 1 -type d -name \"E-*\"').readlines()))
+	
 	for subdir in SUBDIRS: 
 		curd = subdir
 		subdir  = reponame + '/' + subdir
 		ID			= subdir 
-		ID_TYPE		= string.split(ID,'-')[1]
+		ID_TYPE		= string.split(curd ,'-')[1]
 		FILE_ZIP		= curd  + '.processed.1.zip'
 		FILE_SDRF		= curd  + '.sdrf.txt'
 		PROG_ZIP2DIRS		= reponame + '/zip2dirs.rb' 
 		
 
 		def _download_FILE_ZIP_(target, source, env, path2dwnld = ID_TYPE + '/' + curd + '/' + FILE_ZIP, currsubdir = ID): 
-			os.popen('cd ' + currsubdir + ' && wget -N ' + repoconfig.arrayexpress.data_website[1] + path2dwnld)
+			os.popen('cd ' + currsubdir + ' && wget --timestamping ' + repoconfig.arrayexpress.data_website[1] + path2dwnld)
+
 			
 		def _download_FILE_SDRF_(target, source, env, path2dwnld = ID_TYPE + '/' + curd + '/' + FILE_SDRF, currsubdir = ID): 
-			os.popen('cd ' + currsubdir + ' && wget -N ' + repoconfig.arrayexpress.data_website[1]+path2dwnld )
+			os.popen('cd ' + currsubdir + ' && wget --timestamping ' + repoconfig.arrayexpress.data_website[1] + path2dwnld)
 
-		def _zip2dirs_(target, source, env, currsubdir = ID,FILE_ZIP = FILE_ZIP, FILE_SDRF = FILE_SDRF ,curd =curd ): 
-			print source[0].get_abspath(), source[0].rstr()
+
+		def _zip2dirs_(target, source, env, currsubdir = ID,curd =curd ): 
 			os.popen('cd ' + currsubdir + ' && ' + source[0].get_abspath() + ' ' + string.split(source[1].rstr(),'/')[-1:][0]+' '+ string.split(source[2].rstr(),'/')[-1:][0])  
 			IDS_ARRAY = (create_ids_array(source[2].rstr())).keys()
-			print IDS_ARRAY
 			listd = os.listdir(currsubdir)
 			flistd = filter(lambda x: x[:len(curd) + 1] == curd + '_', listd)
 			subsubdirs = filter(lambda x: os.path.isdir(currsubdir+ '/' + x), flistd)
-			sdrf_file = string.split(source[2].rstr(),'/')[-1:]
-			#env.SConscript(reponame + '/SubSConscript', exports=['env','subsubdirs', 'currsubdir','IDS_ARRAY','sdrf_file','reponame'])
-			
-		#env.Command([subdir + '/' + FILE_ZIP, 'dwnld_FileZip_' + curd ], [], _download_FILE_ZIP_)   #TEMPORARY COMMENTED
+			sdrf_file = string.split(source[2].rstr(),'/')[-1:][0]
 
-		#env.Command([subdir + '/' + FILE_SDRF, 'dwnld_FileSdrf_' + curd ], [], _download_FILE_SDRF_)   #TEMPORARY COMMENTED
-		
-		#env.Command(['perform_zip2dir_' + curd ],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF ,\
-		#		 'dwnld_FileZip_' + curd , 'dwnld_FileSdrf_' + curd ], _zip2dirs_)
-		env.Command(['perform_zip2dir_' + curd ],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF], _zip2dirs_)
+			for arr_id in IDS_ARRAY:
+				def _download_adftxt_ (target, source, env, ARRAY_ID = arr_id, currsubdir = currsubdir ):	
+					ARRAY_TYPE = string.split(ARRAY_ID,'-')[1]
+					os.popen('cd ' + currsubdir + ' && ' +'wget -N ' +\
+				  		repoconfig.arrayexpress.data_website[2] + ARRAY_TYPE + '/' + ARRAY_ID + '/' +ARRAY_ID + '.adf.txt')
+				env.Command([ currsubdir  + '/' + arr_id + '.adf.txt','dwnld_adftxt_' + curd + '_' + arr_id ], [], _download_adftxt_)  
+
+			for subsubdir in subsubdirs:
+				print subsubdir , os.getcwd()
+				SUB_ID 		= subsubdir
+				ID_BASE		= string.split(currsubdir,'/')[-1:][0]
+				PROG_TXT2PCL		= reponame + '/' + 'txt2pcl.rb'
+				PROG_METADATA		= reponame + '/' + 'metadata.rb'
+				PROG_PCL2KO		= reponame + '/' + 'pcl2ko.rb'
+				FILE_PCL		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.pcl'
+				FILE_PCLPRE		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_pre.pcl'
+				FILE_PCLKO		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko.pcl'
+				FILE_PCLKOPRE		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko_pre.pcl'
+				FILE_METADATA		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.txt'
+				FILE_METADATAPRE	= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.tmp'
+				FILE_DAB		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.dab'
+				FILE_DABKO		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '_ko.dab'
+				FILE_QUANT		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + SUB_ID + '.quant'
+				FILE_TXT		= filter(lambda x: x[:len(ID_BASE)+1] == ID_BASE + '-' and x[-4:] == '.txt', \
+					  		         os.listdir(reponame + '/' + ID_BASE + '/' + SUB_ID))
+				FILE_TXT		= map(lambda x: reponame + '/' + ID_BASE + '/' + SUB_ID + '/' + x, FILE_TXT) 
+				FILE_SDRF		= reponame + '/' + ID_BASE + '/' + sdrf_file   
+				FILE_KOC		= reponame + '/' + 'species/koc'                
+				FILE_TMP		= reponame + '/' + ID_BASE + '/' + SUB_ID + '/' +'tmp'
+				FILES_KO		= reponame + '/' + 'kos/*'    
+				FILES_ARRAY 		= []
+				for st in IDS_ARRAY: FILES_ARRAY.append(st + '.adf.txt')
+				FA			= map(lambda x: reponame + '/' + ID_BASE + '/' + x,FILES_ARRAY)
+
+				def _create_metadatapre_(target,source,env, FA = FA):
+					os.popen(source[0].get_abspath() + ' 0 ' + source[1].rstr() + ' ' + string.join(FA, ' ') + ' > ' + target[0].rstr()) 
+
+				def _create_pcl_(target, source, env, FILE_TMP=FILE_TMP):
+					os.popen('Normalizer -t pcl -T medmult < ' + source[0].rstr() + ' > ' +  FILE_TMP)
+					os.popen( '[ `wc -l < ' + FILE_TMP + '` -lt 3 ] && ' + '( echo NULL >> ' + FILE_TMP + ')' ) 
+					os.popen('KNNImputer < ' + FILE_TMP + ' > '  + target[0].rstr())
+					os.popen( '[ `wc -l < ' + target[0].rstr() + '` -lt 3 ] && ' + '( echo NULL >> '  + target[0].rstr() + ')' ) 
+
+				env.Command([FILE_QUANT,'create_quant' + '_' + SUB_ID ],[],_create_file_quant_)
+				env.Command([FILE_METADATAPRE,'metadatapre'+SUB_ID],[PROG_METADATA,FILE_SDRF], _create_metadatapre_)
+				env.Command([FILE_PCLPRE, 'pclpre' + SUB_ID],[PROG_TXT2PCL, FILE_METADATAPRE] + FA + FILE_TXT,  shf._shcmd_Nm1i_1i_1o_ )
+				env.Command([FILE_PCL, 'create_pcl' + '_' + SUB_ID],[FILE_PCLPRE], _create_pcl_)
+				env.Command([FILE_DAB, 'create_dab' + '_' + SUB_ID ],[FILE_PCL], shf._Distancer_1o_1i_ ) 
+				env.Command([FILE_METADATA, 'create_metadata' + '_' + SUB_ID],[PROG_METADATA, FILE_PCL, FILE_SDRF] + FA, shf._shcmd_Ni_1o_)	  	
+				env.Command([FILE_PCLKOPRE, 'create_pclcopre' + '_' + SUB_ID],[PROG_PCL2KO, FILE_KOC, FILE_PCL], shf._shcmd_Nm1i_1i_1o_ ) 		
+	
 
 
 
-env = Environment() # imported from MainSConscript
+		env.Command([subdir + '/' + FILE_ZIP, 'dwnld_FileZip_' + curd ], [], _download_FILE_ZIP_)  
+		env.Command([subdir + '/' + FILE_SDRF, 'dwnld_FileSdrf_' + curd ], [], _download_FILE_SDRF_)  			
+		env.Command(['perform_zip2dir_' + curd ],[PROG_ZIP2DIRS, subdir + '/' + FILE_ZIP, subdir + '/' + FILE_SDRF ,\
+				 		'dwnld_FileZip_' + curd , 'dwnld_FileSdrf_' + curd ], _zip2dirs_)
+ 		
+
+
+env = Environment() 
 env.Command(['run_subdirs'],[],_run_subdirectories_)
 
 
