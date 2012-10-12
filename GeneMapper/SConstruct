@@ -1,0 +1,51 @@
+import arepa
+import os
+import sys
+import sfle
+
+pE = Environment( )
+
+#------------------------------------------------------------------------------
+
+c_URL					= "http://svn.bigcat.unimaas.nl/bridgedb/trunk/"
+c_fileHSMappingfileURL	= "http://bridgedb.org/data/gene_database/Hs_Derby_20110601.bridge"
+
+c_dirProg				= sfle.d("trunk")
+c_dirKegg				= sfle.d(arepa.path_repo( ), sfle.c_strDirEtc, "kegg" )
+c_dirUniprotKO			= sfle.d(arepa.path_repo( ), sfle.c_strDirEtc, "uniprotko" )
+
+c_fileBuilder			= sfle.d(pE, c_dirProg, "build.xml")
+c_progBatchmapper		= sfle.d(pE, c_dirProg, "batchmapper.sh")
+c_logfilecheck			= sfle.d(pE, sfle.c_strDirTmp, "checkout.log")
+c_logfilecomp			= sfle.d(pE, sfle.c_strDirTmp, "compile.log")
+c_logfilezip			= sfle.d(pE, sfle.c_strDirTmp, "unzip.log")
+c_fileKEGGTARGZ			= sfle.d(pE, c_dirKegg, "kegg.tar.gz" )
+c_fileUniprotKOTARGZ	= sfle.d(pE, c_dirUniprotKO, "uniprotko.tar.gz" ) 
+c_fileHSMappingfile		= sfle.d(pE, sfle.c_strDirTmp, os.path.basename(c_fileHSMappingfileURL)) 
+
+#===============================================================================
+# Check out last version of the tool and compile
+#===============================================================================
+
+sfle.download(pE, c_fileHSMappingfileURL, c_fileHSMappingfile)
+NoClean(c_fileHSMappingfile)
+
+def funcCheckoutTrunk( target, source, env ):
+	strT, astrSs = sfle.ts( target, source )
+	return ( sfle.ex(["svn checkout", c_URL]) or
+		sfle.ex(["sed", "-i.orig", "'s/^java -jar/java -Xmx1024m -jar/g'", c_progBatchmapper]) or
+		sfle.ex("echo checked out OK", strT) )
+Command(c_logfilecheck, c_fileHSMappingfile, funcCheckoutTrunk )
+
+def funcCompileTrunk( target, source, env ):
+	strT, astrSs = sfle.ts( target, source )
+	return ( sfle.ex(["ant -buildfile", c_fileBuilder]) or
+		sfle.ex("echo compiled OK", strT) )
+Command(c_logfilecomp, c_logfilecheck, funcCompileTrunk )
+
+def funcMakeMapFiles( target, source, env ):
+	strT, astrSs = sfle.ts( target, source )
+	return ( sfle.ex(["tar", "-xzf", c_fileKEGGTARGZ, "-C", c_dirKegg]) or
+		sfle.ex(["tar", "-xzf",c_fileUniprotKOTARGZ, "-C", c_dirUniprotKO]) or
+		sfle.ex("echo Unzipped OK", strT) )
+Command( c_logfilezip, c_logfilecomp, funcMakeMapFiles )
