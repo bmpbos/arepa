@@ -1,0 +1,50 @@
+import arepa
+import os
+import sys
+import sfle
+import pickle
+
+pE = DefaultEnvironment( )
+
+c_strURL			= "http://www.compsysbio.org/bacteriome/dataset/combined_interactions.txt"
+c_strInputTaxIDs		= sfle.d( arepa.path_arepa( ), sfle.c_strDirTmp, "taxids" )
+c_fileBactTXT       	 	= sfle.d( pE, sfle.c_strDirTmp, os.path.basename(c_strURL))
+c_fileProgBacteriome		= sfle.d( pE, arepa.path_repo( ), sfle.c_strDirSrc, "bacteriome.py" ) 
+c_fileProgUnpickle		= sfle.d( pE, arepa.path_arepa( ), sfle.c_strDirSrc, "unpickle.py" )
+c_fileOutDAT             	= sfle.d( pE, sfle.c_strDirData, "bacteriome.dat" ) 
+
+#GeneMapping 
+c_fileInputSConscriptGM		= sfle.d( pE, arepa.path_arepa(),sfle.c_strDirSrc,"SConscript_genemapping.py") 
+c_fileInputSConscriptDAB	= sfle.d( pE, arepa.path_arepa(), sfle.c_strDirSrc, "SConscript_dat-dab.py" )
+c_strGeneFrom			= "Kg"
+c_strMappingfileEcoli   	= sfle.d(arepa.path_arepa(), "GeneMapper", sfle.c_strDirEtc, "uniprotko","511145_eco_ko_uniprot.map")
+
+c_fileInMeta		= sfle.d( pE, arepa.path_repo(), sfle.c_strDirEtc, "bacteriome.txt" )
+c_fileOutDAB            = sfle.d( pE, sfle.c_strDirData, sfle.rebase(c_fileOutDAT, ".dat", ".dab" ))
+c_fileOutQUANT          = sfle.d( pE, sfle.c_strDirData, sfle.rebase(c_fileOutDAT, ".dat", ".quant" ))
+c_fileOutPKL		= sfle.d( pE, sfle.c_strDirData, "bacteriome.pkl" )		 
+c_fileStatus		= sfle.d( pE, sfle.c_strDirData, "status.txt" )
+
+#===============================================================================
+# Download the source file and process 
+#===============================================================================
+sfle.download( pE, c_strURL, c_fileBactTXT )
+
+#Extractor 
+sfle.op( pE, c_fileProgBacteriome, [[c_fileBactTXT], [True,c_fileOutDAT]] )
+
+#Launch gene mapping 
+execfile(str(c_fileInputSConscriptGM)) 
+astrMapped = funcGeneIDMapping( pE, c_fileOutDAT, c_fileStatus, c_strMappingfileEcoli ) 
+
+#Make identifiers unique 
+astrUnique = funcMakeUnique( pE, astrMapped[0] )
+
+#Make metadata 
+sfle.pipe( pE, c_fileInMeta, c_fileProgUnpickle, c_fileOutPKL, ["-r","-l", [c_fileStatus]] )
+
+#DAT to DAB
+execfile( str(c_fileInputSConscriptDAB) )
+astrDAB = funcDAB( pE, c_fileOutDAB, [c_fileOutDAT, astrUnique[0]] )
+funcQUANT( pE, c_fileOutQUANT )
+
