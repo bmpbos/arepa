@@ -1,0 +1,49 @@
+import arepa
+import os
+import sfle
+import sys
+
+
+pE = DefaultEnvironment( )
+
+c_iMinimum			= 10
+c_strSufTXT			= ".txt"
+#c_strURLIntact			= "ftp://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/intact-clustered.zip"
+c_strURLIntact			= "ftp://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/intact-micluster.zip"
+
+c_fileInputTaxIDs		= sfle.d( pE, arepa.path_arepa( ), sfle.c_strDirTmp, "taxids" )
+
+c_fileIntactZIP			= sfle.d( pE, sfle.c_strDirTmp, "intact-clustered.zip" )
+c_fileIntactTXT			= sfle.d( pE, sfle.c_strDirTmp, "intact.txt" )
+c_fileIntactC			= sfle.d( pE, sfle.c_strDirTmp, "intactc" )
+
+c_fileProgIntact2C		= sfle.d( pE, sfle.c_strDirSrc, "intact2c.py" )
+
+#===============================================================================
+# Download the intact.zip source file
+#===============================================================================
+
+sfle.download( pE, c_strURLIntact, c_fileIntactZIP )
+
+#===============================================================================
+# Extract intact.txt from intact.zip
+#===============================================================================
+
+sfle.scmd( pE, "unzip", c_fileIntactTXT, ["-p", [c_fileIntactZIP]] )
+
+#===============================================================================
+# Process intact.txt into the more compact intactc
+#===============================================================================
+
+afileIntactC = sfle.pipe( pE, c_fileIntactTXT, c_fileProgIntact2C,
+	c_fileIntactC, [c_iMinimum, [c_fileInputTaxIDs]] )
+
+#===============================================================================
+# Pass the IDs from intactc to child directories
+#===============================================================================
+
+def funcScanner( target, source, env ):
+	for strLine in open( str(source[0]) ):
+		if strLine.startswith( ">" ):
+			env["sconscript_child"]( target, source[0], env, strLine[1:].strip( ) )
+sfle.sconscript_children( pE, afileIntactC, funcScanner, 1, arepa.c_strProgSConstruct )
