@@ -1,0 +1,128 @@
+import arepa
+import os
+import re
+import sfle
+import sys
+import urllib
+
+c_iMaxTaxa			= 100
+c_strPre			= "_pre"
+c_strSufTXT			= ".txt"
+c_strSufXML			= ".xml"
+c_strAll			= "_all"
+c_strURLLeft		= "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term="
+c_strURLRight		= "[ETYP]&retmax=1000000&usehistory=y"
+c_strURLSum			= "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&retstart=%s&retmax=1000000&query_key=%s&WebEnv=%s"
+c_strURL			= "ftp://ftp.ncbi.nih.gov/pub/geo/DATA/"
+
+c_strType           = "type"
+c_strCount          = "count"
+c_strQuery          = "query_key"
+c_strWebEnv         = "WebEnv"
+c_iIncrement        = 10000
+c_iRetMax           = 1000000
+
+c_strURLGDS			= c_strURL + "SOFT/GDS/"
+c_strURLGSE			= c_strURL + "SeriesMatrix/"
+c_strURLGPL			= c_strURL + "annotation/platforms/"
+
+c_strHost 			= "ftp.ncbi.nih.gov"
+c_strPathAnnot 		= "pub/geo/DATA/annotation/platforms/"
+
+c_fileInputInclude	= sfle.d( sfle.c_strDirEtc, "include" )
+c_fileInputExclude	= sfle.d( sfle.c_strDirEtc, "exclude" )
+c_fileInputTaxIDs	= sfle.d( arepa.path_arepa( ), sfle.c_strDirTmp, "taxids" )
+
+c_fileTmpAnnot		= sfle.d( arepa.path_repo( ), sfle.c_strDirTmp, "annot" + c_strSufTXT ) 
+
+c_hashFiles			= {
+	"GDS"					: "gds",
+	"GSE"					: "gse",
+	"GPL+NOT+GSE+NOT+GSM"	: "gpl"
+}		
+
+c_fileProgXML2TXT	= sfle.d( sfle.c_strDirSrc, "xml2txt.py" )
+
+pE = DefaultEnvironment( )
+
+#===============================================================================
+# Download the lists of GDS, GSE, and GPL IDs
+#===============================================================================
+
+afileTXTs = []
+for strSet, strBase in c_hashFiles.items( ):
+	strOut = sfle.d( sfle.c_strDirTmp, strBase )
+	afilePreXMLs = sfle.download( pE, c_strURLLeft + strSet + c_strURLRight,
+		strOut + c_strPre + c_strSufXML, False, False )
+	NoClean( afilePreXMLs )
+
+	def funcXML( target, source, env ):
+		strT, astrSs = sfle.ts( target, source )
+		iCount = strKey = strEnv = None
+		for strLine in open( astrSs[0] ):
+			mtch = re.search( r'<Count>(\d+)</Count>', strLine )
+			if mtch:
+				iCount = int(mtch.groups( )[0])
+			mtch = re.search( r'QueryKey>(\d+)<.*WebEnv>([^<]+)<', strLine )
+			if mtch:
+				strKey, strEnv = mtch.groups( )
+				break
+		
+		astrXMLs = []
+		for i in xrange( int(1 + ( ( iCount - 1 ) / c_iIncrement )) ):
+			iCur = 1 + ( c_iIncrement * i )
+			strCur = re.sub( r'\.[^.]*$', ( "%d" % iCur ) + sfle.c_strSufXML, strT )
+			sfle.ex( ("curl", '"' + ( c_strURLSum % ( iCur, strKey, strEnv ) ) + '"'), strCur )
+			astrXMLs.append( strCur )
+
+		#Merge XMLs and save  
+		with open( strT, "w" ) as ostm:
+			for iCur, strCur in enumerate( astrXMLs ):
+				astrLines = open( strCur ).readlines( )
+				if iCur:
+					astrLines = astrLines[3:]
+				if ( iCur + 1 ) < len( astrXMLs ):
+					astrLines = astrLines[:-2]
+				ostm.write( "".join( astrLines ) )
+
+	afileXMLs = Command( strOut + c_strSufXML, afilePreXMLs, funcXML )
+	NoClean( afileXMLs )
+
+# Process XML into the more compact gds/gse/gpl.txt
+	afileCur = sfle.pipe( pE, afileXMLs[0], c_fileProgXML2TXT, strOut + c_strSufTXT,
+		[strBase, [c_fileInputTaxIDs]] )
+# Save GDS and GSEs for later
+	if strBase != "gpl":
+		afileTXTs += afileCur
+
+# Parse XML into gds_all/gse_all/gpl_all.txt (text files containing all ids) 
+def getAll( target, source, env ):
+	stripFw = lambda s: stripFw( s[1:] ) if s.startswith("0") else s
+	astrT, astrS = ([f.get_abspath( ) for f in a] for a in (target,source))
+	strPre = os.path.basename( astrS[0] ).replace(c_strPre + c_strSufXML,"").upper() 
+	lst = re.findall( r'<Id>(\d+)</Id>', open( astrS[0], "r" ).read() )
+	with open( astrT[0], "w" ) as outputf:
+		outputf.write("\n".join( map( lambda t: strPre +\
+			 ( t if strPre=="GDS" else stripFw(t[1:])  ) , lst )))
+
+for item in c_hashFiles.values():
+	Command( sfle.d( sfle.c_strDirTmp, item + c_strAll + c_strSufTXT), \
+		sfle.d( sfle.c_strDirTmp, item + c_strPre + c_strSufXML), getAll ) 	
+
+# Download List of annotation files 
+def getAnnot( target, source, env ):
+	astrT, astrS = ([f.get_abspath( ) for f in a] for a in (target,source))
+	astrAnnotation = sfle.ftpls( c_strHost, c_strPathAnnot )
+        with open( astrT[0], "w" ) as outputf:
+                outputf.write( "\n".join( astrAnnotation ) )
+
+afileAnnot = Command( c_fileTmpAnnot, None, getAnnot )
+NoClean( afileAnnot )
+
+#===============================================================================
+# Pass the IDs from gds/gse/gpl.txt to child directories
+#===============================================================================
+
+sfle.sconscript_children( pE, afileTXTs, sfle.scanner( c_fileInputExclude, c_fileInputInclude ),
+	1, arepa.c_strProgSConstruct,
+	{"c_strURLGDS" : c_strURLGDS, "c_strURLGSE" : c_strURLGSE, "c_strURLGPL" : c_strURLGPL} )
