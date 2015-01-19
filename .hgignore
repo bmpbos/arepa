@@ -1,0 +1,14 @@
+syntax: glob
+
+.DS_Store
+.sconsign.dblite
+*.pyc
+*.pyo
+*~
+
+SConstruct.py
+SConscript.py
+*data/
+*tmp/
+GeneMapper/etc/
+GeneMapper/trunk/
